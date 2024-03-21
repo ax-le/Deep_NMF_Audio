@@ -24,7 +24,9 @@ def deep_KL_NMF(data, all_ranks, n_iter_max_each_nmf = 100, n_iter_max_deep_loop
         print(f"The ranks are too high for the input matrix. The {count} larger ranks were set to {min_data} instead.")
         warnings.warn("Ranks have been changed.")
 
-    all_errors = np.zeros((n_iter_max_deep_loop + 1,L))
+    reconstruction_errors = np.empty((L, n_iter_max_deep_loop + 1))
+    reconstruction_errors.fill(None)
+
     toc = []
     global_errors = []
 
@@ -34,21 +36,21 @@ def deep_KL_NMF(data, all_ranks, n_iter_max_each_nmf = 100, n_iter_max_deep_loop
 
     if init == "multilayer_nmf":
         W, H, e, _ = multi_nmf.multilayer_beta_NMF(data, all_ranks, n_iter_max_each_nmf = n_iter_max_each_nmf, init_each_nmf = init_multi_layer, delta = delta, return_errors = True, verbose = False)
-        all_errors[0] = e
+        reconstruction_errors[:,0] = e[:,-1]
 
     elif init == "custom":
         W = W_0
         H = H_0
-        all_errors[0,0] = beta_div.kl_divergence(data, W[0] @ H[0])
+        reconstruction_errors[0,0] = beta_div.kl_divergence(data, W[0] @ H[0])
         for i in range(1,L):
-            all_errors[0,i] = [beta_div.kl_divergence(W[i-1], W[i] @ H[i])]
+            reconstruction_errors[i,0] = [beta_div.kl_divergence(W[i-1], W[i] @ H[i])]
     
     else:
         raise ValueError("The init method is not supported.")
 
-    lambda_ = 1 / np.array(all_errors[0])
+    lambda_ = 1 / np.array(reconstruction_errors[:,0])
 
-    global_errors.append(lambda_.T @ all_errors[0])
+    global_errors.append(lambda_.T @ reconstruction_errors[:,0])
 
     for deep_iteration in range(n_iter_max_deep_loop):
         tic = time.time()
@@ -57,7 +59,7 @@ def deep_KL_NMF(data, all_ranks, n_iter_max_each_nmf = 100, n_iter_max_deep_loop
 
         toc.append(time.time() - tic)
 
-        all_errors[deep_iteration + 1] = errors
+        reconstruction_errors[:, deep_iteration + 1] = lambda_ * errors
         global_errors.append(lambda_.T @ errors)
 
         if verbose:
@@ -73,9 +75,9 @@ def deep_KL_NMF(data, all_ranks, n_iter_max_each_nmf = 100, n_iter_max_deep_loop
             if verbose:
                 print(f'Converged in {deep_iteration} iterations.')
             break
-    
+
     if return_errors:
-        return W, H, global_errors, toc
+        return W, H, reconstruction_errors, toc
     else:
         return W, H
 

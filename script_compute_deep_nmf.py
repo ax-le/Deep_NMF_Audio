@@ -36,13 +36,13 @@ if plotting: # If you want to plot
 
 # # %% Straightforward example:
 W_multi, H_multi, errors_multi, toc_multi = mlnmf.multilayer_beta_NMF(spectrogram, all_ranks = all_ranks, beta = 1, n_iter_max_each_nmf = n_iter, return_errors = True)
-print(f"Multi-layer NMF on the Barwise TF Matrix: errors (in KL-divergence, layer-wise): {errors_multi}, total time of computation: {np.sum(toc_multi)}.")
+print(f"Multi-layer NMF on the Barwise TF Matrix: errors (in KL-divergence): {errors_multi}, total time of computation: {np.sum(toc_multi)}.")
 if plotting: # If you want to plot
     for i in range(len(W_multi)):
         plot_me_this_spectrogram(W_multi[i], title= f"W{i} multilayer", x_axis = "factors", y_axis = "Frequency (Hz)")
 
 W_deep, H_deep, errors_deep, toc_deep = dnmf.deep_KL_NMF(spectrogram, all_ranks = all_ranks, n_iter_max_each_nmf = 100, n_iter_max_deep_loop = n_iter_deep,return_errors=True)
-print(f"Deep NMF on the Barwise TF Matrix: errors per itaration (in relative KL-divergence, compared to the init): {errors_deep}, time of computation after the init: {np.sum(toc_deep)}.")
+print(f"Deep NMF on the Barwise TF Matrix: errors (in relative KL-divergence, compared to the init): {errors_deep}, time of computation after the init: {np.sum(toc_deep)}.")
 if plotting: # If you want to plot
     for i in range(len(W_deep)):
         plot_me_this_spectrogram(W_deep[i], title= f"W{i} deep", x_axis = "Time (s)", y_axis = "factors")
