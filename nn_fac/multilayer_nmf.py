@@ -23,9 +23,7 @@ def multilayer_beta_NMF(data, all_ranks, beta = 1, delta = 1e-6, n_iter_max_each
 
     W = [None] * L
     H = [None] * L
-    #reconstruction_errors = -1 * np.ones((L, n_iter_max_each_nmf))
     toc = [None] * L
-
     reconstruction_errors = np.empty((L, n_iter_max_each_nmf))
     reconstruction_errors.fill(None)
 
