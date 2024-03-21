@@ -37,7 +37,7 @@ signal, _ = librosa.load(audio_path, sr=sr, mono=True)
 bars = model.data_manipulation.get_bars_from_audio(audio_path) # Computing the
 
 oversampled_spectrogram = spectrogram = features.get_spectrogram(signal, sr, hop_length=32, feature=feature)
-barwise_tf_matrix = model.barwise_input.barwise_TF_matrix(spectrogram, bars, 32/sr, subdivision=96) + eps
+barwise_tf_matrix = model.barwise_input.barwise_TF_matrix(oversampled_spectrogram, bars, 32/sr, subdivision=96) + eps
 
 ## Load the annotations
 annotations = model.data_manipulation.get_segmentation_from_txt(annotations_path, "MIREX10")

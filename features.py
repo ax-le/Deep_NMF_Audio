@@ -19,9 +19,11 @@ import librosa.feature
 import librosa.effects
 from math import inf
 import model.errors as err
-# import IPython.display as ipd
+import IPython.display as ipd
 
-def get_spectrogram(signal, sr, feature, hop_length, fmin = 98, complex = False):
+mel_power = 2
+
+def get_spectrogram(signal, sr, feature, hop_length, fmin = 98):
     """
     Returns a spectrogram, from the signal of a song.
     Different types of spectrogram can be computed, which are specified by the argument "feature".
@@ -65,22 +67,25 @@ def get_spectrogram(signal, sr, feature, hop_length, fmin = 98, complex = False)
     In ISMIR (pp. 531-537).
     """
     if feature.lower() == "pcp":
-        assert complex == False, "PCP is a real-valued representation."
         return compute_pcp(signal, sr, hop_length, fmin)
     
     elif feature.lower() == "cqt":
-        return compute_cqt(signal, sr, hop_length, complex)
+        return compute_cqt(signal, sr, hop_length)
     
     # For Mel spectrograms, we use the same parameters as the ones of [2].
     # [2] Grill, Thomas, and Jan Schlüter. "Music Boundary Detection Using Neural Networks on Combined Features and Two-Level Annotations." ISMIR. 2015.
     elif feature.lower() == "mel":
-        return compute_mel_spectrogram(signal, sr, hop_length, complex)
-    elif "mel" in feature:
-        mel_spectrogram = get_spectrogram(signal, sr, "mel", hop_length, complex)
-        return get_log_mel_from_mel(mel_spectrogram, feature)
+        return compute_mel_spectrogram(signal, sr, hop_length)
     
+    elif "mel" in feature:
+        mel_spectrogram = get_spectrogram(signal, sr, "mel", hop_length)
+        return get_log_mel_from_mel(mel_spectrogram, feature)
+        
     elif feature.lower() == "stft":
-        return compute_stft(signal, sr, hop_length, complex)
+        return compute_stft(signal, sr, hop_length, complex = False)
+    elif feature.lower() == "stft_complex":
+        return compute_stft(signal, sr, hop_length, complex = True)
+    
     else:
         raise err.InvalidArgumentValueException(f"Unknown signal representation: {feature}.")
     
@@ -91,7 +96,7 @@ def get_default_frequency_dimension(feature):
         return 84
     elif "mel" in feature.lower():
         return 80
-    elif feature.lower() == "stft":
+    elif feature.lower() == "stft" or feature.lower() == "stft_complex":
         return 1025
     else:
         raise err.InvalidArgumentValueException(f"Unknown signal representation: {feature}.")
@@ -106,19 +111,13 @@ def compute_pcp(signal, sr, hop_length, fmin):
                                 fmin=fmin, n_chroma=12, n_octaves=n_octaves, bins_per_octave=bins_per_octave,
                                 norm=norm, win_len_smooth=win_len_smooth)
 
-def compute_cqt(signal, sr, hop_length, complex):
+def compute_cqt(signal, sr, hop_length):
     constant_q_transf = librosa.cqt(y=signal, sr = sr, hop_length = hop_length)
-    if complex:
-        return librosa.magphase(constant_q_transf, power = 1)
-    else:
-        return np.abs(constant_q_transf)
+    return np.abs(constant_q_transf)
 
-def compute_mel_spectrogram(signal, sr, hop_length, complex):
-    mel = librosa.feature.melspectrogram(y=signal, sr = sr, n_fft=2048, hop_length = hop_length, n_mels=80, fmin=80.0, fmax=16000)
-    if complex:
-        return librosa.magphase(mel, power = 1)
-    else:
-        return np.abs(mel)
+def compute_mel_spectrogram(signal, sr, hop_length):
+    mel = librosa.feature.melspectrogram(y=signal, sr = sr, n_fft=2048, hop_length = hop_length, n_mels=80, fmin=80.0, fmax=16000, power=mel_power)
+    return np.abs(mel)
 
 def get_log_mel_from_mel(mel_spectrogram, feature):
     """
@@ -143,10 +142,12 @@ def get_log_mel_from_mel(mel_spectrogram, feature):
 
     """
     if feature == "log_mel":
-        return librosa.power_to_db(np.abs(mel_spectrogram))
+        return librosa.power_to_db(np.abs(mel_spectrogram), ref=1)
     
     elif feature == "nn_log_mel":
-        return librosa.power_to_db(mel_spectrogram + np.ones(mel_spectrogram.shape))
+        mel_plus_one = np.abs(mel_spectrogram) + np.ones(mel_spectrogram.shape)
+        nn_log_mel = librosa.power_to_db(mel_plus_one, ref=1)
+        return nn_log_mel
     
     elif feature == "padded_log_mel":
         log_mel = get_log_mel_from_mel(mel_spectrogram, "log_mel")
@@ -162,47 +163,49 @@ def get_log_mel_from_mel(mel_spectrogram, feature):
 def compute_stft(signal, sr, hop_length, complex):
     stft = librosa.stft(y=signal, hop_length=hop_length,n_fft=2048)
     if complex:
-        return librosa.magphase(stft, power = 1)
+        mag, phase = librosa.magphase(stft, power = 1)
+        print(mag)
+        return mag, phase
     else:
         return np.abs(stft)
 
-# # %% Spectrogram to audio
-# def get_audio_from_spectrogram(spectrogram, feature, hop_length, sr):
-#     """
-#     Computes an audio signal for a COMPLEX-valued spectrogram.
+# %% Spectrogram to audio
+def get_audio_from_spectrogram(spectrogram, feature, hop_length, sr):
+    """
+    Computes an audio signal for a COMPLEX-valued spectrogram.
 
-#     Parameters
-#     ----------
-#     spectrogram : numpy array
-#         Complex-valued spectrogram.
-#     feature : string
-#         Name of the particular feature used for representing the signal in a spectrogram.
-#     hop_length : int
-#         Hop length of the spectrogram
-#         (Or similar value for the reconstruction to make sense).
-#     sr : inteer
-#         Sampling rate of the signal, when processed into a spectrogram
-#         (Or similar value for the reconstruction to make sense).
+    Parameters
+    ----------
+    spectrogram : numpy array
+        Complex-valued spectrogram.
+    feature : string
+        Name of the particular feature used for representing the signal in a spectrogram.
+    hop_length : int
+        Hop length of the spectrogram
+        (Or similar value for the reconstruction to make sense).
+    sr : inteer
+        Sampling rate of the signal, when processed into a spectrogram
+        (Or similar value for the reconstruction to make sense).
 
-#     Raises
-#     ------
-#     InvalidArgumentValueException
-#         In case of an unknown feature representation.
+    Raises
+    ------
+    InvalidArgumentValueException
+        In case of an unknown feature representation.
 
-#     Returns
-#     -------
-#     ipd.Audio
-#         Audio signal of the spectrogram.
+    Returns
+    -------
+    ipd.Audio
+        Audio signal of the spectrogram.
 
-#     """
-#     if feature == "stft":
-#         audio = librosa.griffinlim(S=spectrogram, hop_length = hop_length)
-#         return ipd.Audio(audio, rate=sr)
-#     elif feature == "mel_grill":
-#         stft = librosa.feature.inverse.mel_to_stft(M=spectrogram, sr=sr, n_fft=2048, power=2.0, fmin=80.0, fmax=16000)
-#         return get_audio_from_spectrogram(stft, "stft", hop_length, sr)
-#     elif feature == "nn_log_mel_grill":
-#         mel = librosa.db_to_power(S_db=spectrogram) - np.ones(spectrogram.shape)
-#         return get_audio_from_spectrogram(mel, "mel_grill", hop_length, sr)
-#     else:
-#         raise err.InvalidArgumentValueException("Unknown feature representation, can't reconstruct a signal.")
+    """
+    if feature == "stft":
+        audio = librosa.griffinlim(S=spectrogram, hop_length = hop_length)
+        return ipd.Audio(audio, rate=sr)
+    elif feature == "mel_grill":
+        stft = librosa.feature.inverse.mel_to_stft(M=spectrogram, sr=sr, n_fft=2048, power=mel_power, fmin=80.0, fmax=16000)
+        return get_audio_from_spectrogram(stft, "stft", hop_length, sr)
+    elif feature == "nn_log_mel_grill":
+        mel = librosa.db_to_power(S_db=spectrogram, ref=1) - np.ones(spectrogram.shape)
+        return get_audio_from_spectrogram(mel, "mel_grill", hop_length, sr)
+    else:
+        raise err.InvalidArgumentValueException("Unknown feature representation, can't reconstruct a signal.")

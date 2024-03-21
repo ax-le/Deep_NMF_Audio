@@ -22,7 +22,7 @@ for Audio-Based Music Structure Analysis"", in: 19th Sound and Music Computing C
 SMC 2022, Sound and music Computing network, 2022.
 """
 
-import data_manipulation as dm
+import model.data_manipulation as dm
 import model.errors as err
 
 import numpy as np
