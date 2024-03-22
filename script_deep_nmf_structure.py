@@ -10,6 +10,7 @@ import model.barwise_input
 
 import nn_fac.multilayer_nmf as mlnmf
 import nn_fac.deep_nmf as dnmf
+import matplotlib.pyplot as plt
 
 from nn_fac.utils.current_plot import plot_me_this_spectrogram, plot_spec_with_annotations
 
@@ -54,3 +55,15 @@ W_deep, H_deep, errors_deep, toc_deep = dnmf.deep_KL_NMF(barwise_tf_matrix, all_
 print(f"Deep NMF on the Barwise TF Matrix: errors per itaration (in relative beta-divergence, compared to the init): {errors_deep}, time of computation after the init: {np.sum(toc_deep)}.")
 as_deep = model.autosimilarity_computation.get_cosine_autosimilarity(W_deep)
 plot_spec_with_annotations(as_deep, barwise_annotations)
+
+# Evolution of the erros at the different levels of 
+# deep β-NMF with β = 1 (initialized with multilayer β-NMF after 250 iterations) 
+# divided by the error of multilayer β-NMF after 500 iterations.
+plt.figure(1)
+plt.plot(errors_deep[0,1:], color='blue', label='Layer 1')
+plt.plot(errors_deep[1,1:], color='red', label='Layer 2')
+plt.xlabel('Iterations')
+plt.ylabel('Ratio deep vs. multilayer')
+# plt.title(r'Computation $x^\star$')
+plt.legend()
+plt.show()
