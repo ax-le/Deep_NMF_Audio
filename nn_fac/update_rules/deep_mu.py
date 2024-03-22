@@ -16,8 +16,7 @@ def deep_KL_mu(W_Lm1, W_L, H_L, WH_Lp1, lambda_):
 
 def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType):
     """
-    Compute the optimal lagrangien multipliers to satisfy sum to one
-     constraints on rows of factors H_l [1].
+    Updates factors W_l and H_l as in Algorithm 1 from [1].
 
     Parameters
     ----------
@@ -39,7 +38,7 @@ def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType):
     Returns
     -------
     arrays
-        the updates factors H_l and W_l as in [1].
+        the updates factors H_l and W_l.
         
     References
     ----------
