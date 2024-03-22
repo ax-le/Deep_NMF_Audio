@@ -6,6 +6,7 @@ import features
 
 import model.data_manipulation
 import model.autosimilarity_computation
+import model.barwise_input
 
 import nn_fac.multilayer_nmf as mlnmf
 import nn_fac.deep_nmf as dnmf
