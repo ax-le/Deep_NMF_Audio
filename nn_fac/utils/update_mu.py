@@ -42,7 +42,7 @@ def update_mu_given_h_rows(C, D, H, mu, convergence_threshold):
     J = np.ones((T, 1))
     r1 = len(mu)
     delta = 1
-    max_iterations = 100
+    max_iterations = 500
 
     for _ in range(max_iterations):
         mu_prev = np.copy(mu)
