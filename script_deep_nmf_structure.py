@@ -23,8 +23,8 @@ plotting = False # If you want data to be plotted
 
 # %% Deep NMF params
 all_ranks = [32,8]
-n_iter = 200
-n_iter_deep = n_iter - 100 # 100 iterations for the initialization using multi-layer NMF
+n_iter = 500
+n_iter_deep = n_iter - 250 # 100 iterations for the initialization using multi-layer NMF
 
 # %% Audio path
 audio_path = 'data/Come_Together.wav'
@@ -50,7 +50,7 @@ print(f"Multi-layer NMF on the Barwise TF Matrix: errors (in beta divergence, la
 as_multi = model.autosimilarity_computation.get_cosine_autosimilarity(W_multi)
 plot_spec_with_annotations(as_multi, barwise_annotations)
 
-W_deep, H_deep, errors_deep, toc_deep = dnmf.deep_KL_NMF(barwise_tf_matrix, all_ranks = all_ranks, n_iter_max_each_nmf = 100, n_iter_max_deep_loop = n_iter_deep,return_errors=True)
+W_deep, H_deep, errors_deep, toc_deep = dnmf.deep_KL_NMF(barwise_tf_matrix, all_ranks = all_ranks, n_iter_max_each_nmf = 250, n_iter_max_deep_loop = n_iter_deep,return_errors=True)
 print(f"Deep NMF on the Barwise TF Matrix: errors per itaration (in relative beta-divergence, compared to the init): {errors_deep}, time of computation after the init: {np.sum(toc_deep)}.")
 as_deep = model.autosimilarity_computation.get_cosine_autosimilarity(W_deep)
 plot_spec_with_annotations(as_deep, barwise_annotations)

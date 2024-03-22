@@ -114,7 +114,8 @@ def get_cosine_autosimilarity(an_array):#, normalise = True):
 
     """
     if type(an_array) is list:
-        this_array = np.array(an_array)
+        # this_array = np.array(an_array)
+        this_array = np.hstack(an_array)
     else:
         this_array = an_array
     #if normalise:
