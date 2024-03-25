@@ -164,7 +164,6 @@ def compute_stft(signal, sr, hop_length, complex):
     stft = librosa.stft(y=signal, hop_length=hop_length,n_fft=2048)
     if complex:
         mag, phase = librosa.magphase(stft, power = 1)
-        print(mag)
         return mag, phase
     else:
         return np.abs(stft)
