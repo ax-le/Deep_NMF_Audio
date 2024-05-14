@@ -1,6 +1,6 @@
 import mirdata
 import librosa
-import model.features as features
+import model.signal_to_spectrogram as signal_to_spectrogram
 import pathlib
 import shutil
 import numpy as np
@@ -22,7 +22,7 @@ class BaseDataloader():
         # For barwise or beatwise processing
         self.subdivision = subdivision
 
-        self.frequency_dimension = features.get_default_frequency_dimension(feature) # Risky, because it is not linked to the computation. Should be computed from the spectrogram.
+        self.frequency_dimension = signal_to_spectrogram.get_default_frequency_dimension(feature) # Risky, because it is not linked to the computation. Should be computed from the spectrogram.
 
     def __getitem__(self, index):
         raise NotImplementedError("This method should be implemented in the child class") from None
@@ -31,7 +31,7 @@ class BaseDataloader():
         raise NotImplementedError("This method should be implemented in the child class") from None
 
     def get_spectrogram(self, signal): # The spectrogram is not saved in the cache because it is too large in general
-        return features.get_spectrogram(signal, self.sr, self.feature, self.hop_length)
+        return signal_to_spectrogram.get_spectrogram(signal, self.sr, self.feature, self.hop_length)
     
     def get_bars(self, audio_path, index = None):
         def _compute_bars():

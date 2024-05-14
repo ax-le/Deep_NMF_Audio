@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Feb 12 2024
+Created on Wed Mar 25 16:54:59 2020
 
-@author: a23marmo
+@author: amarmore
 
 Computing spectrogram in different feature description.
 
@@ -23,6 +23,7 @@ import IPython.display as ipd
 
 mel_power = 2
 
+# TODO: add MFCC, maybe tonnetz
 def get_spectrogram(signal, sr, feature, hop_length, fmin = 98):
     """
     Returns a spectrogram, from the signal of a song.
@@ -45,6 +46,9 @@ def get_spectrogram(signal, sr, feature, hop_length, fmin = 98):
     fmin : integer, optional
         The minimal frequence to consider, used for denoising.
         The default is 98.
+    n_mfcc : integer, optional
+        Number of mfcc features.
+        The default is 20 (as in librosa).
 
     Raises
     ------
@@ -167,44 +171,18 @@ def compute_stft(signal, sr, hop_length, complex):
         return mag, phase
     else:
         return np.abs(stft)
+    
+def get_stft_from_mel(mel_spectrogram, feature, sr):
+    if feature == "mel":
+        return librosa.feature.inverse.mel_to_stft(M=mel_spectrogram, sr=sr, n_fft=2048, power=mel_power, fmin=80.0, fmax=16000)
+    
+    elif feature == "log_mel":
+        mel = librosa.db_to_power(S_db=mel_spectrogram, ref=1)
+        return get_stft_from_mel(mel, "mel", sr=sr)
 
-# %% Spectrogram to audio
-def get_audio_from_spectrogram(spectrogram, feature, hop_length, sr):
-    """
-    Computes an audio signal for a COMPLEX-valued spectrogram.
+    elif feature == "nn_log_mel":
+        mel = librosa.db_to_power(S_db=mel_spectrogram, ref=1) - np.ones(mel_spectrogram.shape)
+        return get_stft_from_mel(mel, "mel", sr=sr)
 
-    Parameters
-    ----------
-    spectrogram : numpy array
-        Complex-valued spectrogram.
-    feature : string
-        Name of the particular feature used for representing the signal in a spectrogram.
-    hop_length : int
-        Hop length of the spectrogram
-        (Or similar value for the reconstruction to make sense).
-    sr : inteer
-        Sampling rate of the signal, when processed into a spectrogram
-        (Or similar value for the reconstruction to make sense).
-
-    Raises
-    ------
-    InvalidArgumentValueException
-        In case of an unknown feature representation.
-
-    Returns
-    -------
-    ipd.Audio
-        Audio signal of the spectrogram.
-
-    """
-    if feature == "stft":
-        audio = librosa.griffinlim(S=spectrogram, hop_length = hop_length)
-        return ipd.Audio(audio, rate=sr)
-    elif feature == "mel_grill":
-        stft = librosa.feature.inverse.mel_to_stft(M=spectrogram, sr=sr, n_fft=2048, power=mel_power, fmin=80.0, fmax=16000)
-        return get_audio_from_spectrogram(stft, "stft", hop_length, sr)
-    elif feature == "nn_log_mel_grill":
-        mel = librosa.db_to_power(S_db=spectrogram, ref=1) - np.ones(spectrogram.shape)
-        return get_audio_from_spectrogram(mel, "mel_grill", hop_length, sr)
     else:
-        raise err.InvalidArgumentValueException("Unknown feature representation, can't reconstruct a signal.")
+        raise err.InvalidArgumentValueException("Unknown feature representation.")

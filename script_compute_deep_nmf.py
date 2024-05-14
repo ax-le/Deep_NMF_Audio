@@ -2,7 +2,7 @@
 import numpy as np
 import librosa
 
-import features
+import model.signal_to_spectrogram as signal_to_spectrogram
 
 import nn_fac.multilayer_nmf as mlnmf
 import nn_fac.deep_nmf as dnmf
@@ -29,7 +29,7 @@ audio_path = 'data/Come_Together.wav'
 signal, _ = librosa.load(audio_path, sr=sr, mono=True)
 
 # Compute the spectrogram
-spectrogram = features.get_spectrogram(signal, sr, hop_length=512, feature=feature)
+spectrogram = signal_to_spectrogram.get_spectrogram(signal, sr, hop_length=512, feature=feature)
 
 if plotting: # If you want to plot
     plot_me_this_spectrogram(spectrogram, title= "Spectrogram", x_axis = "Time (s)", y_axis = "Frequency (Hz)")

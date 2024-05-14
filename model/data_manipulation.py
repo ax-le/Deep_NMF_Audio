@@ -427,7 +427,39 @@ def align_frontiers_on_bars(frontiers, bars):
             else:
                 frontiers_on_bars.append(bars[i][0])
     return frontiers_on_bars
-            
+
+def get_median_hop(bars, subdivision = 96, sampling_rate = 44100):
+    """
+    Returns the median hop length in the song, used for audio reconstruction.
+    The rationale is that all bars are sampled with 'subdivision' number of frames, 
+    but they can be of different lengths in absolute time.
+    Hence, the time gap between two consecutive frames (the hop length) can differ between bars.
+    For reconstruction, we use the median hop length among all bars.
+
+    Parameters
+    ----------
+    bars : list of tuples of float
+        The bars, as (start time, end time) tuples.
+    subdivision : integer, optional
+        The number of subdivision of the bar to be contained in each slice of the tensor.
+        The default is 96.
+    sampling_rate : integer, optional
+        The sampling rate of the signal, in Hz.
+        The default is 44100.
+
+    Returns
+    -------
+    integer
+        The median hop length in these bars.
+
+    """
+    hops = []
+    for bar_idx in range(1, len(bars)):
+        len_sig = bars[bar_idx][1] - bars[bar_idx][0]
+        hop = int(len_sig/subdivision * sampling_rate)
+        hops.append(hop)
+    return int(np.median(hops)) # Generally used for audio reconstruction
+
 # %% Sonification of the segmentation
 def sonify_frontiers_path(audio_file_path, frontiers_in_seconds, output_path):
     """

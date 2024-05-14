@@ -2,7 +2,7 @@
 import numpy as np
 import librosa
 
-import features
+import model.signal_to_spectrogram as signal_to_spectrogram
 
 import model.data_manipulation
 import model.autosimilarity_computation
@@ -38,7 +38,7 @@ signal, _ = librosa.load(audio_path, sr=sr, mono=True)
 ## Process the data, to compute a barwise TF matrix
 bars = model.data_manipulation.get_bars_from_audio(audio_path) # Computing the
 
-oversampled_spectrogram = spectrogram = features.get_spectrogram(signal, sr, hop_length=32, feature=feature)
+oversampled_spectrogram = spectrogram = signal_to_spectrogram.get_spectrogram(signal, sr, hop_length=32, feature=feature)
 barwise_tf_matrix = model.barwise_input.barwise_TF_matrix(oversampled_spectrogram, bars, 32/sr, subdivision=96) + eps
 
 ## Load the annotations

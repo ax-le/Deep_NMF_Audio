@@ -16,4 +16,10 @@ class ToDebugException(AbnormalBehaviorException): pass
 class BuggedFunctionException(AbnormalBehaviorException): pass
 class OutdatedBehaviorException(AbnormalBehaviorException): pass
 
+class UndesiredScenarioException(BaseException): pass
+class MaskAlmostOneException(UndesiredScenarioException): pass
+class PatternNeverUsedException(UndesiredScenarioException): pass
+
+class NotImplementedException(BaseException): pass
+
 
