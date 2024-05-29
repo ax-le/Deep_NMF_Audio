@@ -93,7 +93,7 @@ def one_step_deep_KL_nmf(data, W, H, all_ranks, lambda_, delta):
             # H[0] = mu.switch_alternate_mu(data, W[0], H[0], beta=1, matrix="H")
             # W[0] = deep_mu.deep_KL_mu(data, W[0], H[0], W[1] @ H[1], lam)
             # W[0], H[0] = normalize_WH(W[0], H[0], matrix="H")
-            W[0], H[0] = deep_mu.levelUpdateDeepKLNMF(H[0], data, W[0], W[1] @ H[1], lam, epsi=1e-8, beta=1, HnormType='rows')
+            W[0], H[0] = deep_mu.levelUpdateDeepKLNMF(H[0], data, W[0], W[1] @ H[1], lam, epsi=1e-8, beta=1, HnormType='rows', mul_la_Method='Bisec')
             errors.append(beta_div.kl_divergence(data, W[0] @ H[0]))
 
         elif layer == L - 1:
@@ -110,7 +110,7 @@ def one_step_deep_KL_nmf(data, W, H, all_ranks, lambda_, delta):
             # H[layer] = mu.switch_alternate_mu(W[layer-1], W[layer], H[layer], beta=1, matrix="H")
             # W[layer] = deep_mu.deep_KL_mu(W[layer-1], W[layer], H[layer], W[layer+1] @ H[layer+1], lam)
             # W[layer], H[layer] = normalize_WH(W[layer], H[layer], matrix="H")
-            W[layer], H[layer] = deep_mu.levelUpdateDeepKLNMF(H[layer], W[layer-1], W[layer], W[layer+1]@H[layer+1], lam, epsi=1e-8, beta=1, HnormType='rows')
+            W[layer], H[layer] = deep_mu.levelUpdateDeepKLNMF(H[layer], W[layer-1], W[layer], W[layer+1]@H[layer+1], lam, epsi=1e-8, beta=1, HnormType='rows', mul_la_Method='Bisec')
             errors.append(beta_div.kl_divergence(W[layer-1], W[layer] @ H[layer]))
 
     return W, H, errors

@@ -108,3 +108,67 @@ def update_mu_given_h_cols(C, D, H, mu, convergence_threshold):
             break
 
     return mu
+
+def eval_Ratio_Fun(h_bar, c, d, mu, rho):
+  """
+  Evaluate the function to be canceled
+
+  Parameters
+  ----------
+  h_bar : array
+  c     : array
+  d     : array
+  mu    : float
+  rho   : float
+
+  Returns
+  -------
+  the value of the function evaluated at mu
+  """
+  return np.sum(h_bar*(c/(d - mu))) - rho
+
+def bissection_mu_la(h_bar, c , d, rho, tolerance, max_Iter, t_min, t_max):
+    """
+    Compute the optimal lagrangien multipliers to satisfy sum to one
+     constraints on columns of factors H_l [1] with Bisection method.
+
+    Parameters
+    ----------
+    h_bard : array
+    c : array
+    d : array
+        the current factor H_l
+    rho : float
+        the normalization constant: \sum_q^Q f_q(mu) = rho
+    t_min and t_max : floats
+        the initial interval for Bisection search
+    mu: array
+        the initial vector of Lagrangian multipliers
+    tolerance and  max_Iter: float
+        the stopping criteria
+    
+    Returns
+    -------
+    arrays
+        the optimal Lagrangian multiplier for the subset set B, 
+        the number of iterations, and the final accuracy obtained.
+
+        
+    References
+    ----------
+    [1] V.Leplat, J. Idier and N. Gillis, Multiplicative Updates for NMF with 
+    β-Divergences under Disjoint Equality Constraints, SIAM Journal on Matrix 
+    Analysis and Applications 42.2 (2021), pp. 730-752., 2021.
+    """
+    a, b = t_min, t_max
+    n_iter = 0
+    while b - a > tolerance and n_iter <= max_Iter:
+        r = (a + b) / 2
+        n_iter += 1
+        if eval_Ratio_Fun(h_bar, c, d, r, rho) * eval_Ratio_Fun(h_bar, c, d, a, rho) < 0:
+            b = r
+        else:
+            a = r
+    accu = np.abs(eval_Ratio_Fun(h_bar, c, d, r, rho))
+    return r, n_iter, accu
+
