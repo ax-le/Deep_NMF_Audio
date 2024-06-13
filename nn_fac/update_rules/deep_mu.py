@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.special import lambertw # The lambertw function is imported from the scipy.special module.
-import nn_fac.update_rules.mu as mu
+import nn_fac.update_rules.mu as mupdate
 from nn_fac.utils.update_mu import update_mu_given_h_rows
 from nn_fac.utils.update_mu import update_mu_given_h_cols
 from nn_fac.utils.update_mu import bissection_mu_la
@@ -88,7 +88,7 @@ def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType, mul_la_Method,
                 h_bar = H[k, :]
                 c = C[k, :]
                 d = D[k, :]
-                t_min = np.min(d - r1*c/rho)
+                t_min = np.min(d - n*c/rho)
                 t_max = np.min(d)*99/100
                 mu_k, n_iter_k, accu_k = bissection_mu_la(h_bar, c , d, rho, epsi, max_Iter, t_min, t_max)
                 mu.append(mu_k)
@@ -108,7 +108,6 @@ def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType, mul_la_Method,
             mu_0_H = np.reshape(mu_0_H, (n,1))
             mu_H = update_mu_given_h_cols(C, D, H, mu_0_H, epsi)
         elif mul_la_Method == 'Bisec':
-            print("Not supported at the moment - restart")
             mu = []
             n_iter = []
             accu = []
@@ -119,7 +118,7 @@ def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType, mul_la_Method,
                 c = C[:, k]
                 d = D[:, k]
                 t_min = np.min(d - r1*c/rho)
-                t_max = np.min(d)*99/100
+                t_max = np.min(d)
                 mu_k, n_iter_k, accu_k = bissection_mu_la(h_bar, c , d, rho, epsi, max_Iter, t_min, t_max)
                 mu.append(mu_k)
                 n_iter.append(n_iter_k)
@@ -149,6 +148,6 @@ def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType, mul_la_Method,
             W = 1/4*((C + discriminant)/A)**2
             W = np.maximum(eps, W)
     else:
-        W = mu.switch_alternate_mu(X, W, H, beta, matrix="W")
+        W = mupdate.switch_alternate_mu(X, W, H, beta, matrix="W")
         W = np.maximum(eps, W)
     return W, H

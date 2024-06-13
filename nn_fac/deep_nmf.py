@@ -38,7 +38,13 @@ def deep_KL_NMF(data, all_ranks, beta = 1, n_iter_max_each_nmf = 100, n_iter_max
         #warnings.warn("Warning: The ranks of deep NMF should be decreasing.")
 
     if init == "multilayer_nmf":
-        W, H, e, _ = multi_nmf.multilayer_beta_NMF(data, all_ranks, n_iter_max_each_nmf = n_iter_max_each_nmf, init_each_nmf = init_multi_layer, delta = delta, return_errors = True, verbose = False)
+        if HnormType == 'cols':
+            norm_type = "h_cols"
+
+        elif HnormType == 'rows':
+            norm_type = "h_rows"
+
+        W, H, e, _ = multi_nmf.multilayer_beta_NMF(data, all_ranks, n_iter_max_each_nmf = n_iter_max_each_nmf, init_each_nmf = init_multi_layer, delta = delta, norm_type = norm_type, return_errors = True, verbose = False)
         reconstruction_errors[:,0] = e[:,-1]
 
     elif init == "custom":

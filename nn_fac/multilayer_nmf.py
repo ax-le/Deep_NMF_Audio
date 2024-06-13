@@ -1,10 +1,13 @@
 import numpy as np
 import warnings
+import time
 
 from nn_fac.nmf import nmf
 from nn_fac.utils.normalize_wh import normalize_WH
+import nn_fac.utils.beta_divergence as beta_div
+import nn_fac.update_rules.deep_mu as deep_mu
 
-def multilayer_beta_NMF(data, all_ranks, beta = 1, delta = 1e-6, n_iter_max_each_nmf = 100, init_each_nmf = "nndsvd", return_errors = False, verbose = False):
+def multilayer_beta_NMF(data, all_ranks, beta = 1, delta = 1e-6, n_iter_max_each_nmf = 100, init_each_nmf = "nndsvd", norm_type = "h_rows", return_errors = False, verbose = False):
     # delta is useless here, because we use our own beta_nmf.
     L = len(all_ranks)
     assert L > 1, "The number of layers must be at least 2. Otherwise, ou should just use NMF"
@@ -27,10 +30,10 @@ def multilayer_beta_NMF(data, all_ranks, beta = 1, delta = 1e-6, n_iter_max_each
     reconstruction_errors = np.empty((L, n_iter_max_each_nmf))
     reconstruction_errors.fill(None)
 
-    W[0], H[0], reconstruction_errors[0], toc[0] = one_layer_update(data=data, rank=all_ranks[0], beta=beta, delta=delta, init_each_nmf=init_each_nmf, n_iter_max_each_nmf=n_iter_max_each_nmf, verbose=verbose)
+    W[0], H[0], reconstruction_errors[0], toc[0] = one_layer_update(data=data, rank=all_ranks[0], beta=beta, delta=delta, norm_type = norm_type, init_each_nmf=init_each_nmf, n_iter_max_each_nmf=n_iter_max_each_nmf, verbose=verbose)
     
     for i in range(1, L): # Layers
-        W_i, H_i, errors_i, toc_i = one_layer_update(data=W[i - 1], rank=all_ranks[i], beta=beta, delta=delta, init_each_nmf=init_each_nmf, n_iter_max_each_nmf=n_iter_max_each_nmf, verbose=verbose)
+        W_i, H_i, errors_i, toc_i = one_layer_update(data=W[i - 1], rank=all_ranks[i], beta=beta, delta=delta, norm_type = norm_type, init_each_nmf=init_each_nmf, n_iter_max_each_nmf=n_iter_max_each_nmf, verbose=verbose)
         W[i], H[i], reconstruction_errors[i], toc[i] = W_i, H_i, errors_i, toc_i
         if verbose:
             print(f'Layer {i} done.')
@@ -40,14 +43,36 @@ def multilayer_beta_NMF(data, all_ranks, beta = 1, delta = 1e-6, n_iter_max_each
     else:
         return W, H
 
-def one_layer_update(data, rank, beta, delta, init_each_nmf, n_iter_max_each_nmf, verbose):
-    W, H, cost_fct_vals, times = nmf(data, rank, init = init_each_nmf, U_0 = None, V_0 = None, n_iter_max=n_iter_max_each_nmf, tol=1e-8,
-                                     update_rule = "mu", beta = beta,
-                                     sparsity_coefficients = [None, None], fixed_modes = [], normalize = [False, True],
-                                     verbose=verbose, return_costs=True, deterministic=False)
-    W_normalized, H_normalized = normalize_WH(W, H, matrix="H")
-    reconstruction_errors = np.array(cost_fct_vals)
-    toc = np.sum(times)
+def one_layer_update(data, rank, beta, delta, norm_type, init_each_nmf, n_iter_max_each_nmf, verbose):
+    if norm_type == 'h_rows' or norm_type == 'w_cols':
+        W, H, cost_fct_vals, times = nmf(data, rank, init = init_each_nmf, U_0 = None, V_0 = None, n_iter_max=n_iter_max_each_nmf, tol=1e-8,
+                                        update_rule = "mu", beta = beta,
+                                        sparsity_coefficients = [None, None], fixed_modes = [], normalize = [False, True],
+                                        verbose=verbose, return_costs=True, deterministic=False)
+        W_normalized, H_normalized = normalize_WH(W, H, matrix="H")
+        reconstruction_errors = np.array(cost_fct_vals)
+        toc = np.sum(times)
+    elif norm_type == 'h_cols':
+        # Init for W_0 and H_0
+        m, n = data.shape
+        W = np.random.rand(m, rank)
+        H = np.random.rand(rank, n)
+        # We want to reuse the code for last layer updates of deep beta NMF for SS constraints
+        flag_ll = 1
+        # Init of various arrays
+        times = []
+        cost_fct_vals = []
+        for multi_iteration in range(n_iter_max_each_nmf):
+            tic = time.time()
+            # Update 
+            W_normalized, H_normalized = deep_mu.levelUpdateDeepKLNMF(H, data, W, 0, 0, epsi = 1e-8, beta = beta, HnormType = 'cols', mul_la_Method = 'Bisec', flag_ll = flag_ll)
+            times.append(time.time() - tic)
+            cost_fct_vals.append(beta_div.kl_divergence(data, W @ H))
+        
+        # Compute the errors in good format and total time
+        reconstruction_errors = np.array(cost_fct_vals)
+        toc = np.sum(times)
+
     return W_normalized, H_normalized, reconstruction_errors, toc
 
 if __name__ == "__main__":
