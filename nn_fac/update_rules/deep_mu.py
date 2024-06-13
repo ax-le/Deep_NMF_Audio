@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.special import lambertw # The lambertw function is imported from the scipy.special module.
+import nn_fac.update_rules.mu as mu
 from nn_fac.utils.update_mu import update_mu_given_h_rows
 from nn_fac.utils.update_mu import update_mu_given_h_cols
 from nn_fac.utils.update_mu import bissection_mu_la
@@ -15,7 +16,7 @@ def deep_KL_mu(W_Lm1, W_L, H_L, WH_Lp1, lambda_):
 
     return W_L
 
-def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType, mul_la_Method):
+def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType, mul_la_Method, flag_ll):
     """
     Updates factors W_l and H_l as in Algorithm 1 from [1].
 
@@ -39,6 +40,8 @@ def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType, mul_la_Method)
         the type of normalisations for H_l ('rows' or 'cols')
     mul_la_Method : string
         the method chosen for computing optimal Lagrangian multipliers ('NR' or 'Bisec')
+    flag_ll : binary
+        1 if we update the last layer, 0 otherwise
     
     Returns
     -------
@@ -131,17 +134,21 @@ def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType, mul_la_Method)
 
     # Update of factor W
     Ht = H.T 
-    if beta == 1:
-        a = e.dot(Ht) - lam*np.log(Wp)
-        b = W*((X/(W.dot(H)))@Ht)
-        W = np.maximum(np.finfo(float).eps, 1/lam * b/(np.real(lambertw(1/lam*b*np.exp(a/lam)))))
-    elif beta == 3/2:
-        prod_pow = np.sqrt((W.dot(H)))
-        W_pow = np.sqrt(W)
-        A = (1/W_pow)*(prod_pow@Ht) + 2*lam
-        B = W_pow*((X/prod_pow)@Ht)
-        C = 2*lam*np.sqrt(Wp)
-        discriminant = np.sqrt(C**2 + 4*A*B)
-        W = 1/4*((C + discriminant)/A)**2
-        W = np.maximum(np.finfo(float).eps, W)
+    if not(flag_ll):
+        if beta == 1:
+            a = e.dot(Ht) - lam*np.log(Wp)
+            b = W*((X/(W.dot(H)))@Ht)
+            W = np.maximum(eps, 1/lam * b/(np.real(lambertw(1/lam*b*np.exp(a/lam)))))
+        elif beta == 3/2:
+            prod_pow = np.sqrt((W.dot(H)))
+            W_pow = np.sqrt(W)
+            A = (1/W_pow)*(prod_pow@Ht) + 2*lam
+            B = W_pow*((X/prod_pow)@Ht)
+            C = 2*lam*np.sqrt(Wp)
+            discriminant = np.sqrt(C**2 + 4*A*B)
+            W = 1/4*((C + discriminant)/A)**2
+            W = np.maximum(eps, W)
+    else:
+        W = mu.switch_alternate_mu(X, W, H, beta, matrix="W")
+        W = np.maximum(eps, W)
     return W, H
