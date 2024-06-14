@@ -46,10 +46,10 @@ def update_mu_given_h_rows(C, D, H, mu, convergence_threshold):
 
     for _ in range(max_iterations):
         mu_prev = np.copy(mu)
-        H_times_C_over_D_minus_J_dot_mu = H * (C / (D - mu.dot(J.T) + 10**-8))
+        H_times_C_over_D_minus_J_dot_mu = H * (C / (D - mu.dot(J.T) + 10**-12))
         xi = np.sum(H_times_C_over_D_minus_J_dot_mu, axis=1) - delta
         xi = np.reshape(xi, (r1,1))
-        H_times_C_over_D_minus_J_dot_mu_squared = H * C / (D - mu.dot(J.T) + 10**-8)**2
+        H_times_C_over_D_minus_J_dot_mu_squared = H * C / (D - mu.dot(J.T) + 10**-12)**2
         xi_prime = np.sum(H_times_C_over_D_minus_J_dot_mu_squared, axis=1)
         xi_prime = np.reshape(xi_prime, (r1,1))
 
@@ -91,7 +91,8 @@ def update_mu_given_h_cols(C, D, H, mu, convergence_threshold):
     J = np.ones((K, 1))
     delta = 1
     max_iterations = 1000
-    eps = np.finfo(float).eps
+    # eps = np.finfo(float).eps
+    eps = 10**-12
 
     for _ in range(max_iterations):
         mu_prev = np.copy(mu)
