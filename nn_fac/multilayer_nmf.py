@@ -9,6 +9,7 @@ import nn_fac.update_rules.deep_mu as deep_mu
 
 def multilayer_beta_NMF(data, all_ranks, beta = 1, delta = 1e-6, n_iter_max_each_nmf = 100, init_each_nmf = "nndsvd", norm_type = "h_rows", return_errors = False, verbose = False):
     # delta is useless here, because we use our own beta_nmf.
+    print('----------- MultiLayer NMF running ------------')
     L = len(all_ranks)
     assert L > 1, "The number of layers must be at least 2. Otherwise, ou should just use NMF"
     if min(data.shape) < max(all_ranks):
@@ -37,7 +38,8 @@ def multilayer_beta_NMF(data, all_ranks, beta = 1, delta = 1e-6, n_iter_max_each
         W[i], H[i], reconstruction_errors[i], toc[i] = W_i, H_i, errors_i, toc_i
         if verbose:
             print(f'Layer {i} done.')
-
+    
+    print('----------- MultiLayer NMF done ------------')
     if return_errors:
         return W, H, reconstruction_errors, toc
     else:
@@ -106,6 +108,7 @@ def group_robust_nmf(Y, beta, M, A, R, lambda_, thres, n_iter_max):
     obj[iter - 1] = fit[iter - 1] + lambda_ * np.sum(np.sqrt(np.sum(R**2, axis=0)))  # Compute objective
     err = np.inf
     times = []
+    print('Robust multi layer NMF on')
     print(f'iter = {iter:4} | obj = {obj[iter - 1]:+5.2E} | err = {err:4.2E} (target is {thres:4.2E})')
 
     while err >= thres and iter < n_iter_max:

@@ -13,7 +13,8 @@ from nn_fac.utils.normalize_wh import normalize_WH
 from nn_fac.utils.update_mu import update_mu_given_h_cols
 from nn_fac.utils.update_mu import bissection_mu_la
 
-def deep_KL_NMF(data, all_ranks, beta = 1, n_iter_max_each_nmf = 100, n_iter_max_deep_loop = 100, init = "multilayer_nmf", init_multi_layer = "nndsvd", HnormType = 'rows', mul_la_Method = 'Bisec', W_0 = None, H_0 = None, delta = 1e-6, tol = 1e-6, epsi = 1e-6, return_errors = False, verbose = False):
+def deep_KL_NMF(data, all_ranks, beta = 1, n_iter_max_each_nmf = 100, n_iter_max_deep_loop = 100, init = "multilayer_nmf", init_multi_layer = "nndsvd", HnormType = 'rows', mul_la_Method = 'Bisec', robustNMF_on = 0, W_0 = None, H_0 = None, delta = 1e-6, tol = 1e-6, epsi = 1e-6, return_errors = False, verbose = False):
+    print('----------- Deep NMF running ------------')
     L = len(all_ranks)
     # accuracy for the respect of the Lagrangian multipliers setup with "epsi"
     assert L > 1, "The number of layers must be at least 2. Otherwise, you should just use NMF."
@@ -64,7 +65,7 @@ def deep_KL_NMF(data, all_ranks, beta = 1, n_iter_max_each_nmf = 100, n_iter_max
     for deep_iteration in range(n_iter_max_deep_loop):
         tic = time.time()
 
-        W, H, errors = one_step_deep_KL_nmf(data, W, H, all_ranks, HnormType, mul_la_Method, lambda_, delta, beta, epsi)
+        W, H, errors = one_step_deep_KL_nmf(data, W, H, all_ranks, HnormType, mul_la_Method, lambda_, delta, beta, epsi, robustNMF_on)
 
         toc.append(time.time() - tic)
 
@@ -85,12 +86,13 @@ def deep_KL_NMF(data, all_ranks, beta = 1, n_iter_max_each_nmf = 100, n_iter_max
                 print(f'Converged in {deep_iteration} iterations.')
             break
 
+    print('----------- Deep NMF done ------------')
     if return_errors:
         return W, H, reconstruction_errors, toc
     else:
         return W, H
 
-def one_step_deep_KL_nmf(data, W, H, all_ranks, HnormType, mul_la_Method, lambda_, delta, beta, epsi):
+def one_step_deep_KL_nmf(data, W, H, all_ranks, HnormType, mul_la_Method, lambda_, delta, beta, epsi, robustNMF_on):
     # delta is useless here, because we use our own beta_nmf.
     L = len(all_ranks)
     errors = []
@@ -100,7 +102,7 @@ def one_step_deep_KL_nmf(data, W, H, all_ranks, HnormType, mul_la_Method, lambda
             ### Update of factors W_1 and H_1
             lam = lambda_[1] / lambda_[0]
             flag_ll = 0 #0 if last layer, 1 otherwise
-            W[0], H[0] = deep_mu.levelUpdateDeepKLNMF(H[0], data, W[0], W[1] @ H[1], lam, epsi, beta, HnormType, mul_la_Method, flag_ll)
+            W[0], H[0] = deep_mu.levelUpdateDeepKLNMF(H[0], data, W[0], W[1] @ H[1], lam, epsi, beta, HnormType, mul_la_Method, flag_ll, robustNMF_on)
             errors.append(beta_div.kl_divergence(data, W[0] @ H[0]))
 
         elif layer == L - 1:
@@ -114,7 +116,7 @@ def one_step_deep_KL_nmf(data, W, H, all_ranks, HnormType, mul_la_Method, lambda
                 ### Update of factors W_L and H_L
                 # We set to zero the fourth and fifth arguments W[layer+1]@H[layer+1] and lam since there are none
                 flag_ll = 1 #0 if last layer, 1 otherwise
-                W[layer], H[layer] = deep_mu.levelUpdateDeepKLNMF(H[layer], W[layer-1], W[layer], 0, 0, epsi, beta, HnormType, mul_la_Method, flag_ll)
+                W[layer], H[layer] = deep_mu.levelUpdateDeepKLNMF(H[layer], W[layer-1], W[layer], 0, 0, epsi, beta, HnormType, mul_la_Method, flag_ll, robustNMF_on)
 
             errors.append(beta_div.kl_divergence(W[layer-1], W[layer] @ H[layer]))
 
@@ -122,7 +124,7 @@ def one_step_deep_KL_nmf(data, W, H, all_ranks, HnormType, mul_la_Method, lambda
             ### Update of factors W_l and H_l
             lam = lambda_[layer + 1] / lambda_[layer]
             flag_ll = 0 #0 if last layer, 1 otherwise
-            W[layer], H[layer] = deep_mu.levelUpdateDeepKLNMF(H[layer], W[layer-1], W[layer], W[layer+1]@H[layer+1], lam, epsi, beta, HnormType, mul_la_Method, flag_ll)
+            W[layer], H[layer] = deep_mu.levelUpdateDeepKLNMF(H[layer], W[layer-1], W[layer], W[layer+1]@H[layer+1], lam, epsi, beta, HnormType, mul_la_Method, flag_ll, robustNMF_on)
             errors.append(beta_div.kl_divergence(W[layer-1], W[layer] @ H[layer]))
 
     return W, H, errors
