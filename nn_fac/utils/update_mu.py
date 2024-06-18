@@ -41,19 +41,21 @@ def update_mu_given_h_rows(C, D, H, mu, convergence_threshold):
     K, T = C.shape
     J = np.ones((T, 1))
     r1 = len(mu)
+    eps = np.finfo(float).eps
+    # eps = 10**-12
     delta = 1
     max_iterations = 500
 
     for _ in range(max_iterations):
         mu_prev = np.copy(mu)
-        H_times_C_over_D_minus_J_dot_mu = H * (C / (D - mu.dot(J.T) + 10**-12))
+        H_times_C_over_D_minus_J_dot_mu = H * (C / (D - mu.dot(J.T) + eps))
         xi = np.sum(H_times_C_over_D_minus_J_dot_mu, axis=1) - delta
         xi = np.reshape(xi, (r1,1))
-        H_times_C_over_D_minus_J_dot_mu_squared = H * C / (D - mu.dot(J.T) + 10**-12)**2
+        H_times_C_over_D_minus_J_dot_mu_squared = H * C / (D - mu.dot(J.T) + eps)**2
         xi_prime = np.sum(H_times_C_over_D_minus_J_dot_mu_squared, axis=1)
         xi_prime = np.reshape(xi_prime, (r1,1))
 
-        mu = mu - xi / xi_prime
+        mu = mu - xi / (xi_prime + eps)
 
         if np.max(np.abs(mu - mu_prev)) <= convergence_threshold:
             break
@@ -90,25 +92,43 @@ def update_mu_given_h_cols(C, D, H, mu, convergence_threshold):
     K, T = C.shape
     J = np.ones((K, 1))
     delta = 1
-    max_iterations = 1000
-    # eps = np.finfo(float).eps
-    eps = 10**-12
+    max_iterations = 500
+    failure = 0
+    eps = np.finfo(float).eps
+    # eps = 10**-12
+    # precomputation
+    idx_interest = np.arange(0, T, 1)
+    mu_prev = np.copy(mu)
+    J_dot_mu = J.dot(mu.T)
+    H_times_C_over_D_minus_J_dot_mu = H* (C / (D- J_dot_mu + eps))
+    H_times_C_over_D_minus_J_dot_mu_squared = H* C/ (D - J_dot_mu + eps)**2
 
     for _ in range(max_iterations):
-        mu_prev = np.copy(mu)
-        H_times_C_over_D_minus_J_dot_mu = H * (C / (D - J.dot(mu.T) + eps))
+        mu_prev[idx_interest] = np.copy(mu[idx_interest])
+        J_dot_mu = J.dot(mu.T)
+        H_times_C_over_D_minus_J_dot_mu[:,idx_interest] = H[:,idx_interest] * (C[:,idx_interest] / (D[:,idx_interest] - J_dot_mu[:,idx_interest] + eps))
         xi = np.sum(H_times_C_over_D_minus_J_dot_mu, axis=0) - delta
         xi = np.reshape(xi, (T,1))
-        H_times_C_over_D_minus_J_dot_mu_squared = H * C / (D - J.dot(mu.T) + eps)**2
+        # Check the indices no satisfying the constraints
+        idx_interest = np.where(np.abs(xi)>convergence_threshold)[0]
+        if idx_interest.size == 0:
+            break
+        
+        H_times_C_over_D_minus_J_dot_mu_squared[:,idx_interest] = H[:,idx_interest] * C[:,idx_interest] / (D[:,idx_interest] - J_dot_mu[:,idx_interest] + eps)**2
         xi_prime = np.sum(H_times_C_over_D_minus_J_dot_mu_squared, axis=0)
         xi_prime = np.reshape(xi_prime, (T,1))
 
-        mu = mu - xi / xi_prime
+        mu[idx_interest] = mu[idx_interest] - xi[idx_interest] / (xi_prime[idx_interest] + eps)
 
-        if np.max(np.abs(mu - mu_prev)) <= convergence_threshold:
-            break
+        # Below the previous stopping criterion
+        #if np.max(np.abs(mu - mu_prev)) <= convergence_threshold:
+        #    break
+    
+    # Final check for satisfaction of the constraints
+    if idx_interest.size > 0:
+        failure = 1
 
-    return mu
+    return mu, failure
 
 def eval_Ratio_Fun(h_bar, c, d, mu, rho):
   """

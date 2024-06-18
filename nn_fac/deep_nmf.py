@@ -13,7 +13,7 @@ from nn_fac.utils.normalize_wh import normalize_WH
 from nn_fac.utils.update_mu import update_mu_given_h_cols
 from nn_fac.utils.update_mu import bissection_mu_la
 
-def deep_KL_NMF(data, all_ranks, beta = 1, n_iter_max_each_nmf = 100, n_iter_max_deep_loop = 100, init = "multilayer_nmf", init_multi_layer = "nndsvd", HnormType = 'rows', mul_la_Method = 'Bisec', W_0 = None, H_0 = None, delta = 1e-6, tol = 1e-6, epsi = 1e-8, return_errors = False, verbose = False):
+def deep_KL_NMF(data, all_ranks, beta = 1, n_iter_max_each_nmf = 100, n_iter_max_deep_loop = 100, init = "multilayer_nmf", init_multi_layer = "nndsvd", HnormType = 'rows', mul_la_Method = 'Bisec', W_0 = None, H_0 = None, delta = 1e-6, tol = 1e-6, epsi = 1e-6, return_errors = False, verbose = False):
     L = len(all_ranks)
     # accuracy for the respect of the Lagrangian multipliers setup with "epsi"
     assert L > 1, "The number of layers must be at least 2. Otherwise, you should just use NMF."

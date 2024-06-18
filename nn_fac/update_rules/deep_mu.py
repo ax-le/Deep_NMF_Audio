@@ -106,7 +106,10 @@ def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType, mul_la_Method,
             idx = np.ravel_multi_index((I, np.arange(D.shape[1])), D.shape)
             mu_0_H = (D.ravel()[idx] - C.ravel()[idx]*H.ravel()[idx]).T
             mu_0_H = np.reshape(mu_0_H, (n,1))
-            mu_H = update_mu_given_h_cols(C, D, H, mu_0_H, epsi)
+            mu_H, failure = update_mu_given_h_cols(C, D, H, mu_0_H, epsi)
+            # TO DO: check if the constraints are satisfied, if not develop correction step
+            # if failure:
+                # print('Warning: check the constraints')
         elif mul_la_Method == 'Bisec':
             mu = []
             n_iter = []
@@ -123,7 +126,7 @@ def levelUpdateDeepKLNMF(H, X, W, Wp, lam, epsi, beta, HnormType, mul_la_Method,
                 mu.append(mu_k)
                 n_iter.append(n_iter_k)
                 accu.append(accu_k)
-            # TO DO: check if the constraints are satisfied, if not develop correction step
+            
             mu_H = np.array(mu)
             mu_H = np.reshape(mu_H,(n,1))
 
