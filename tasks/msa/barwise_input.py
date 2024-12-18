@@ -12,17 +12,15 @@ See [1 - Chapter 2.4] or [2] for more information.
 
 References
 ----------
-[1] Unsupervised Machine Learning Paradigms for the Representation of Music Similarity and Structure, 
-PhD Thesis Marmoret Axel 
-(not uploaded yet but will be soon!)
-(You should check the website hal.archives-ouvertes.fr/ in case this docstring is not updated with the reference.)
+[1] Marmoret, A. (2022). Unsupervised Machine Learning Paradigms for the Representation of Music Similarity and Structure (Doctoral dissertation, Université Rennes 1).
+https://theses.hal.science/tel-04589687
 
 [2] Marmoret, A., Cohen, J.E, and Bimbot, F., "Barwise Compression Schemes 
 for Audio-Based Music Structure Analysis"", in: 19th Sound and Music Computing Conference, 
 SMC 2022, Sound and music Computing network, 2022.
 """
 
-import model.data_manipulation as dm
+import tasks.msa.data_manipulation as dm
 import model.errors as err
 
 import numpy as np
@@ -31,6 +29,19 @@ import librosa
 
 # %% Spectrograms to tensors
 # !!! Be extremely careful with the organization of modes, which can be either Frequency-Time at barscale-Bars (FTB) or Bars-Frequency-Time at barscale (BFT) depending on the method.
+def spectrogram_to_tensor_barwise(spectrogram, bars, hop_length_seconds, subdivision, mode_order="BFT", subset_nb_bars = None):
+    """
+    Spectrogram to tensor-spectrogram, with the order of modes defined by the mode_order parameter.
+    """
+    if mode_order == "BFT":
+        return tensorize_barwise_BFT(spectrogram, bars, hop_length_seconds, subdivision, subset_nb_bars)
+    
+    elif mode_order == "FTB":
+        return tensorize_barwise_FTB(spectrogram, bars, hop_length_seconds, subdivision, subset_nb_bars)
+    
+    else:
+        raise err.InvalidArgumentValueException(f"Unknown mode order: {mode_order}.")
+
 def tensorize_barwise_BFT(spectrogram, bars, hop_length_seconds, subdivision, subset_nb_bars = None):
     """
     Returns a 3rd order tensor-spectrogram from the original spectrogram and bars starts and ends.
@@ -123,6 +134,9 @@ def tensorize_barwise_FTB(spectrogram, bars, hop_length_seconds, subdivision, su
 
 # %% Tensors to spectrograms
 def tensor_barwise_to_spectrogram(tensor, mode_order = "BFT", subset_nb_bars = None):
+    """
+    Return a spectrogram from a tensor-spectrogram, with the order of modes defined by the mode_order parameter.
+    """
     if subset_nb_bars is not None:
         tensor = barwise_subset_this_tensor(tensor, subset_nb_bars, mode_order = mode_order)
     
@@ -136,6 +150,9 @@ def tensor_barwise_to_spectrogram(tensor, mode_order = "BFT", subset_nb_bars = N
         raise err.InvalidArgumentValueException(f"Unknown mode order: {mode_order}.")
 
 def barwise_subset_this_tensor(tensor, subset_nb_bars, mode_order = "BFT"):
+    """
+    Keep only the subset_nb_bars first bars in the tensor.
+    """
     if mode_order == "BFT":
         return tensor[:subset_nb_bars]
    
@@ -146,6 +163,9 @@ def barwise_subset_this_tensor(tensor, subset_nb_bars, mode_order = "BFT"):
         raise err.InvalidArgumentValueException(f"Unknown mode order: {mode_order}.")
     
 def get_this_bar_tensor(tensor, bar_idx, mode_order = "BFT"):
+    """
+    Return one particular bar of the tensor.
+    """
     if mode_order == "BFT":
         return tensor[bar_idx]
    
@@ -182,6 +202,9 @@ def barwise_TF_matrix(spectrogram, bars, hop_length_seconds, subdivision, subset
     return tl.unfold(tensor_spectrogram, 0)
 
 def barwise_subset_this_TF_matrix(matrix, subset_nb_bars):
+    """
+    Keep only the subset_nb_bars first bars in the Barwise TF matrix.
+    """
     assert subset_nb_bars is not None
     return matrix[:subset_nb_bars]
 
@@ -211,6 +234,9 @@ def TF_vector_to_spectrogram(vector, frequency_dimension, subdivision):
     return tl.fold(vector, 0, (frequency_dimension,subdivision))
 
 def TF_matrix_to_spectrogram(matrix, frequency_dimension, subdivision, subset_nb_bars = None):
+    """
+    Encapsulating the conversion from a Barwise TF matrix to a spectrogram.
+    """
     spectrogram_content = None
     if subset_nb_bars is not None:
         matrix = barwise_subset_this_TF_matrix(matrix, subset_nb_bars)
@@ -222,10 +248,13 @@ def TF_matrix_to_spectrogram(matrix, frequency_dimension, subdivision, subset_nb
 
 # Tensor to Barwise TF
 def tensor_barwise_to_barwise_TF(tensor, mode_order = "BFT"):
+    """
+    Return the Barwise TF matrix from a tensor-spectrogram, with the order of modes defined by the mode_order parameter.
+    """
     # Barmode: 0 for BTF, 2 for FTB
-    if mode_order == "BFT": # Checked
+    if mode_order == "BFT":
         return tl.unfold(tensor, 0)
-    elif mode_order == "FTB": # Checked
+    elif mode_order == "FTB":
         return tl.unfold(tensor, 2)
     else:
         raise err.InvalidArgumentValueException(f"Unknown mode order: {mode_order}.")

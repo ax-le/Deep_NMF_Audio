@@ -59,7 +59,27 @@ def get_bars_from_audio(song_path):
     downbeats_times.append(song_length) # adding the last downbeat
     return frontiers_to_segments(downbeats_times)
     
+def get_beats_from_audio_madmom(song_path):
+    """
+    Uses madmom to estimate the beats of a song, from its audio signal.
+    """
+    act = bt.TCNBeatProcessor()(song_path)
+    proc = bt.BeatTrackingProcessor(fps=100)
+    song_beats = proc(act)
+    
+    # beats_times = []    
+    # if song_beats[0][1] != 1: # Adding a first downbeat at the start of the song
+        # beats_times.append(0.1)
+    # for beat in song_beats:
+        # if beat[1] == 1: # If the beat is a downbeat
+            # downbeats_times.append(beat[0])
+            
+    return frontiers_to_segments(list(song_beats))
+
 def get_beats_from_audio_msaf(signal, sr, hop_length):
+    """
+    Uses MSAF to estimate the beats of a song, from its audio signal.
+    """
     _, audio_percussive = librosa.effects.hpss(signal)
     
     # Compute beats
@@ -76,23 +96,6 @@ def get_beats_from_audio_msaf(signal, sr, hop_length):
     return beat_times, beat_frames
     
 # %% Read and treat inputs
-def get_beats_from_audio_madmom(song_path):
-    """
-    TODO
-    """
-    act = bt.TCNBeatProcessor()(song_path)
-    proc = bt.BeatTrackingProcessor(fps=100)
-    song_beats = proc(act)
-    
-    # beats_times = []    
-    # if song_beats[0][1] != 1: # Adding a first downbeat at the start of the song
-        # beats_times.append(0.1)
-    # for beat in song_beats:
-        # if beat[1] == 1: # If the beat is a downbeat
-            # downbeats_times.append(beat[0])
-            
-    return frontiers_to_segments(list(song_beats))
-
 def get_segmentation_from_txt(path, annotations_type):
     """
     Reads the segmentation annotations, and returns it in a list of tuples (start, end, index as a number)
@@ -552,7 +555,7 @@ def compute_score_from_frontiers_in_bar(reference, frontiers_in_bar, bars, windo
     frontiers_in_time = frontiers_from_bar_to_time(frontiers_in_bar, bars)
     return compute_score_of_segmentation(reference, frontiers_to_segments(frontiers_in_time), window_length = window_length)
 
-def compute_score_of_segmentation(reference, segments_in_time, window_length = 0.5):
+def compute_score_of_segmentation(reference, segments_in_time, window_length = 0.5, trim = False):
     """
     Computes precision, recall and f measure from estimated segments and the reference, both in seconds.    
     Scores are computed from the mir_eval toolbox.
@@ -566,6 +569,11 @@ def compute_score_of_segmentation(reference, segments_in_time, window_length = 0
     window_length : float, optional
         The window size for the score (tolerance for the frontier to be validated).
         The default is 0.5.
+    trim : boolean, optional
+        Whether (True) or not (False) the first and last boundaries should be "trimmed", 
+        i.e. discarded in the computation of accurate boundaries.
+        Default is False, meaning that they are kept by default.
+        This may artifically increase the metrics, but is the standard in the benchmarks.
 
     Returns
     -------
@@ -583,14 +591,14 @@ def compute_score_of_segmentation(reference, segments_in_time, window_length = 0
     ref_intervals, useless = mir_eval.util.adjust_intervals(reference,t_min=0)
     est_intervals, useless = mir_eval.util.adjust_intervals(np.array(segments_in_time), t_min=0, t_max=ref_intervals[-1, 1])
     try:
-        return mir_eval.segment.detection(ref_intervals, est_intervals, window = window_length, trim = False)
+        return mir_eval.segment.detection(ref_intervals, est_intervals, window = window_length, trim = trim)
     except ValueError:
         cleaned_intervals = []
         #print("A segment is (probably) composed of the same start and end. Can happen with time -> bar -> time conversion, but should'nt happen for data originally segmented in bars.")
         for idx in range(len(est_intervals)):
             if est_intervals[idx][0] != est_intervals[idx][1]:
                 cleaned_intervals.append(est_intervals[idx])
-        return mir_eval.segment.detection(ref_intervals, np.array(cleaned_intervals), window = window_length, trim = False)
+        return mir_eval.segment.detection(ref_intervals, np.array(cleaned_intervals), window = window_length, trim = trim)
 
 def compute_median_deviation_of_segmentation(reference, segments_in_time):
     """
@@ -671,6 +679,9 @@ def compute_rates_of_segmentation(reference, segments_in_time, window_length = 0
 # %% High level encapsulation of the computation of scores, based on segments.
 ## Tolerances are MIREX standards in time (0.5s and 3s), or 0 and 1 bar when barwise aligned.
 def get_scores_from_segments_in_time(segments_in_time, ref_tab):
+    """
+    Computes the scores of the segmentation from the segments in time and the references when references may be multiple.
+    """
     if type(ref_tab[0][0]) != np.ndarray: # ref_tab consist in the references, and should be nested in an array (for consistency).
         ref_tab = [ref_tab]
 
@@ -689,10 +700,16 @@ def get_scores_from_segments_in_time(segments_in_time, ref_tab):
     return res
 
 def get_scores_in_time_from_barwise_segments(segments, bars, ref_tab):
+    """
+    Computes the scores of the segmentation from the segments in bar indexes and the references.
+    """
     segments_in_time = segments_from_bar_to_time(segments, bars)
     return get_scores_from_segments_in_time(segments_in_time, ref_tab)
     
 def get_scores_in_bars_from_barwise_segments(segments, bars, ref_tab):
+    """
+    Get scores from segments in bar indexes and references, with tolerance expressed in bars.
+    """
     res = -math.inf * np.ones((2, 3))
 
     if type(ref_tab[0][0]) != np.ndarray: # ref_tab consist in the references, and should be nested in an array (for consistency between double anntoations in SALAMI and single in RWC).
@@ -715,6 +732,9 @@ def get_scores_in_bars_from_barwise_segments(segments, bars, ref_tab):
     return res
                                           
 def get_scores_switch_time_alignment(time_alignment, segments, bars, ref_tab):
+    """
+    Get scores from segments, where the tolerance may be expressed in seconds (absolute time) or in bars (barwise aligned).
+    """
     if type(ref_tab[0][0]) != np.ndarray: # ref_tab consist in the references, and should be nested in an array (for consistency).
         ref_tab = [ref_tab]
 

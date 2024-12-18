@@ -3,7 +3,8 @@ Pour faire fonctionner le code, il faut installer des librairies supplémentaire
 - numpy (calculs matriciels, 'pip install numpy')
 - tensorly (calculs tensoriels, 'pip install tensorly')
 - nimfa (pour initilaiser la NMF, 'pip install nimfa')
-- matplotib (pour les visualisation, 'pip install matplotlib')
+- matplotib (pour les visualisations, 'pip install matplotlib')
+- base_audio (pour les calculs de spctrogramme, un package que j'ai créé récemmment, 'pip install base_audio')
 
 Nécessaires pour l'analyse en structure:
 - madmom ('pip install git+https://github.com/CPJKU/madmom')
