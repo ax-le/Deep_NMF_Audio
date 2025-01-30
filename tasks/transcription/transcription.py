@@ -26,7 +26,7 @@ import librosa
 from collections import defaultdict
 import mir_eval
 
-import nmf_audio_benchmark.utils.errors as err
+import model.errors as err
 
 class Transcription(BaseTask):
     """
@@ -123,10 +123,10 @@ def W_to_notes(W, feature_object, pitch_min = 50, pitch_max = 5000, salience_shi
     for idx_col in range(0,W.shape[1]): # Fundamental frequency estimation of each atom of the codebook
         try:
             f0s.append(W_column_to_note(W[:,idx_col], feature_object, pitch_min = pitch_min, pitch_max = pitch_max, salience_shift_autocorrelation = salience_shift_autocorrelation))
-        except ValueError as err:
+        except ValueError as error:
             f0s.append(None)
             if verbose:
-                print("Error in the " + str(idx_col) + "-th note-atom of the codebook: " + err.args[0])
+                print("Error in the " + str(idx_col) + "-th note-atom of the codebook: " + error.args[0])
     return f0s
 
 def W_column_to_note(W_col, feature_object, pitch_min = 27, pitch_max = 4500, salience_shift_autocorrelation = 0.3):
